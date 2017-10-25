@@ -7,12 +7,12 @@
  * @flow
  */
 
-import type {AggregatedResult, TestResult} from 'types/TestResult';
-import type {GlobalConfig, ReporterConfig} from 'types/Config';
-import type {Context} from 'types/Context';
-import type {Reporter, Test} from 'types/TestRunner';
+import type { AggregatedResult, TestResult } from 'types/TestResult';
+import type { GlobalConfig, ReporterConfig } from 'types/Config';
+import type { Context } from 'types/Context';
+import type { Reporter, Test } from 'types/TestRunner';
 
-import {formatExecError} from 'jest-message-util';
+import { formatExecError } from 'jest-message-util';
 import {
   addResult,
   buildFailureTestResult,
@@ -89,11 +89,11 @@ export default class TestScheduler {
         return Promise.resolve();
       }
       if (testResult.testResults.length === 0) {
-        const message = 'Your test suite must contain at least one test.';
-        await onFailure(test, {
-          message,
-          stack: new Error(message).stack,
-        });
+        // const message = 'Your test suite must contain at least one test.';
+        // await onFailure(test, {
+        //   message,
+        //   stack: new Error(message).stack,
+        // });
         return Promise.resolve();
       }
       addResult(aggregatedResults, testResult);
@@ -140,106 +140,106 @@ export default class TestScheduler {
     });
 
     const testRunners = Object.create(null);
-    contexts.forEach(({config}) => {
+    contexts.forEach(({ config }) => {
       if (!testRunners[config.runner]) {
         // $FlowFixMe
         testRunners[config.runner] = new (require(config.runner): TestRunner)(
-          this._globalConfig,
-        );
+      this._globalConfig,
+    );
+  }
+});
+
+const testsByRunner = this._partitionTests(testRunners, tests);
+
+if (testsByRunner) {
+  try {
+    for (const runner of Object.keys(testRunners)) {
+      await testRunners[runner].runTests(
+        testsByRunner[runner],
+        watcher,
+        onStart,
+        onResult,
+        onFailure,
+        {
+          serial: runInBand,
+        },
+      );
+    }
+  } catch (error) {
+    if (!watcher.isInterrupted()) {
+      throw error;
+    }
+  }
+}
+
+updateSnapshotState();
+aggregatedResults.wasInterrupted = watcher.isInterrupted();
+await this._dispatcher.onRunComplete(contexts, aggregatedResults);
+
+const anyTestFailures = !(
+  aggregatedResults.numFailedTests === 0 &&
+  aggregatedResults.numRuntimeErrorTestSuites === 0
+);
+const anyReporterErrors = this._dispatcher.hasErrors();
+
+aggregatedResults.success = !(
+  anyTestFailures ||
+  aggregatedResults.snapshot.failure ||
+  anyReporterErrors
+);
+
+return aggregatedResults;
+  }
+
+_partitionTests(
+  testRunners: { [key: string]: TestRunner, __proto__: null },
+  tests: Array < Test >,
+) {
+  if (Object.keys(testRunners).length > 1) {
+    return tests.reduce((testRuns, test) => {
+      const runner = test.context.config.runner;
+      if (!testRuns[runner]) {
+        testRuns[runner] = [];
       }
+      testRuns[runner].push(test);
+      return testRuns;
+    }, Object.create(null));
+  } else if (tests.length > 0 && tests[0] != null) {
+    // If there is only one runner, don't partition the tests.
+    return Object.assign(Object.create(null), {
+      [tests[0].context.config.runner]: tests,
     });
-
-    const testsByRunner = this._partitionTests(testRunners, tests);
-
-    if (testsByRunner) {
-      try {
-        for (const runner of Object.keys(testRunners)) {
-          await testRunners[runner].runTests(
-            testsByRunner[runner],
-            watcher,
-            onStart,
-            onResult,
-            onFailure,
-            {
-              serial: runInBand,
-            },
-          );
-        }
-      } catch (error) {
-        if (!watcher.isInterrupted()) {
-          throw error;
-        }
-      }
-    }
-
-    updateSnapshotState();
-    aggregatedResults.wasInterrupted = watcher.isInterrupted();
-    await this._dispatcher.onRunComplete(contexts, aggregatedResults);
-
-    const anyTestFailures = !(
-      aggregatedResults.numFailedTests === 0 &&
-      aggregatedResults.numRuntimeErrorTestSuites === 0
-    );
-    const anyReporterErrors = this._dispatcher.hasErrors();
-
-    aggregatedResults.success = !(
-      anyTestFailures ||
-      aggregatedResults.snapshot.failure ||
-      anyReporterErrors
-    );
-
-    return aggregatedResults;
+  } else {
+    return null;
   }
+}
 
-  _partitionTests(
-    testRunners: {[key: string]: TestRunner, __proto__: null},
-    tests: Array<Test>,
-  ) {
-    if (Object.keys(testRunners).length > 1) {
-      return tests.reduce((testRuns, test) => {
-        const runner = test.context.config.runner;
-        if (!testRuns[runner]) {
-          testRuns[runner] = [];
-        }
-        testRuns[runner].push(test);
-        return testRuns;
-      }, Object.create(null));
-    } else if (tests.length > 0 && tests[0] != null) {
-      // If there is only one runner, don't partition the tests.
-      return Object.assign(Object.create(null), {
-        [tests[0].context.config.runner]: tests,
-      });
-    } else {
-      return null;
-    }
-  }
-
-  _shouldAddDefaultReporters(reporters?: Array<ReporterConfig>): boolean {
-    return (
+_shouldAddDefaultReporters(reporters ?: Array<ReporterConfig>): boolean {
+  return(
       !reporters ||
       !!reporters.find(reporterConfig => reporterConfig[0] === 'default')
-    );
-  }
+  );
+}
 
   _setupReporters() {
-    const {collectCoverage, notify, reporters} = this._globalConfig;
+    const { collectCoverage, notify, reporters } = this._globalConfig;
     const isDefault = this._shouldAddDefaultReporters(reporters);
 
-    if (isDefault) {
+    if(isDefault) {
       this._setupDefaultReporters();
     }
 
-    if (collectCoverage) {
+    if(collectCoverage) {
       this.addReporter(new CoverageReporter(this._globalConfig));
     }
 
-    if (notify) {
+    if(notify) {
       this.addReporter(
         new NotifyReporter(this._globalConfig, this._options.startRun),
       );
     }
 
-    if (reporters && Array.isArray(reporters)) {
+    if(reporters && Array.isArray(reporters)) {
       this._addCustomReporters(reporters);
     }
   }
@@ -260,7 +260,7 @@ export default class TestScheduler {
     );
 
     customReporters.forEach((reporter, index) => {
-      const {options, path} = this._getReporterProps(reporter);
+      const { options, path } = this._getReporterProps(reporter);
 
       try {
         // $FlowFixMe
@@ -269,9 +269,9 @@ export default class TestScheduler {
       } catch (error) {
         throw new Error(
           'An error occurred while adding the reporter at path "' +
-            path +
-            '".' +
-            error.message,
+          path +
+          '".' +
+          error.message,
         );
       }
     });
@@ -282,36 +282,36 @@ export default class TestScheduler {
    * to make dealing with them less painful.
    */
   _getReporterProps(
-    reporter: ReporterConfig,
-  ): {path: string, options?: Object} {
-    if (typeof reporter === 'string') {
-      return {options: this._options, path: reporter};
-    } else if (Array.isArray(reporter)) {
-      const [path, options] = reporter;
-      return {options, path};
-    }
+      reporter: ReporterConfig,
+    ): { path: string, options?: Object } {
+      if(typeof reporter === 'string') {
+        return { options: this._options, path: reporter };
+      } else if(Array.isArray(reporter)) {
+        const [path, options] = reporter;
+        return { options, path };
+      }
 
     throw new Error('Reporter should be either a string or an array');
-  }
+    }
 
   _bailIfNeeded(
-    contexts: Set<Context>,
-    aggregatedResults: AggregatedResult,
-    watcher: TestWatcher,
-  ): Promise<void> {
-    if (this._globalConfig.bail && aggregatedResults.numFailedTests !== 0) {
-      if (watcher.isWatchMode()) {
-        watcher.setState({interrupted: true});
-      } else {
-        const exit = () => process.exit(1);
-        return this._dispatcher
-          .onRunComplete(contexts, aggregatedResults)
-          .then(exit)
-          .catch(exit);
+      contexts: Set < Context >,
+      aggregatedResults: AggregatedResult,
+      watcher: TestWatcher,
+    ): Promise < void> {
+      if(this._globalConfig.bail && aggregatedResults.numFailedTests !== 0) {
+        if (watcher.isWatchMode()) {
+          watcher.setState({ interrupted: true });
+        } else {
+          const exit = () => process.exit(1);
+          return this._dispatcher
+            .onRunComplete(contexts, aggregatedResults)
+            .then(exit)
+            .catch(exit);
+        }
       }
-    }
     return Promise.resolve();
-  }
+    }
 }
 
 const createAggregatedResults = (numTotalTestSuites: number) => {
